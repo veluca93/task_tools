@@ -23,7 +23,7 @@ class TaskDescription(object):
         return self.description
 
 
-class ProcessUIInterface(object):
+class UIInterface(object):
     def __init__(self, queue):
         self.queue = queue
 
@@ -59,7 +59,7 @@ class GenericUI(object):
     TASK_STOPPING = 2
 
     def __init__(self):
-        self.queue = Queue()
+        self.queue = Queue.Queue()
         self.thread = threading.Thread(target=self.run, args=())
         self.stopping = False
 
@@ -90,7 +90,7 @@ class GenericUI(object):
                 time.sleep(0.01)
 
     def get_logger(self):
-        return ProcessUIInterface(self.queue)
+        return UIInterface(self.queue)
 
     # Methods that should be replaced by subclasses
 
