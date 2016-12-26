@@ -1,6 +1,5 @@
 import itertools
 import logging
-import multiprocessing
 import os
 import time
 import threading
@@ -60,7 +59,7 @@ class GenericUI(object):
     TASK_STOPPING = 2
 
     def __init__(self):
-        self.queue = multiprocessing.Queue()
+        self.queue = Queue()
         self.thread = threading.Thread(target=self.run, args=())
         self.stopping = False
 
