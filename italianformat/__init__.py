@@ -9,6 +9,7 @@ from italianformat.executor import TaskExecutor
 def fun(sleep_time, logger, name):
     task = logger.start_task(name)
     time.sleep(sleep_time)
+    logger.output(task, name)
     logger.stop_task(task)
 
 def main():

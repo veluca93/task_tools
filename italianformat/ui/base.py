@@ -53,10 +53,14 @@ class UIInterface(object):
     def critical(self, task_descr, msg, *args, **kwargs):
         self.log(logging.CRITICAL, task_descr, msg, *args, **kwargs)
 
+    def output(self, task_descr, msg, *args, **kwargs):
+        self.log(GenericUI.OUTPUT, task_descr, msg, *args, **kwargs)
+
 
 class GenericUI(object):
     TASK_STARTING = 1
     TASK_STOPPING = 2
+    OUTPUT = logging.CRITICAL+10
 
     def __init__(self):
         self.queue = Queue.Queue()

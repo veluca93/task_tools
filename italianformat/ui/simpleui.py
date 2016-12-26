@@ -28,7 +28,9 @@ class SimpleUI(GenericUI):
         super(SimpleUI, self).__init__()
 
     def handle(self, lvl, task_descr, msg, *args, **kwargs):
-        if lvl >= self.lvl:
+        if lvl == GenericUI.OUTPUT:
+            print(msg.format(*args, **kwargs))
+        elif lvl >= self.lvl:
             prefix = self.lvl_to_string[lvl].rjust(8)
             prefix += " "
             prefix += task_descr.get_description()
