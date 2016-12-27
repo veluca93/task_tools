@@ -27,13 +27,13 @@ class SimpleUI(GenericUI):
             self.use_colors = True
         super(SimpleUI, self).__init__()
 
-    def handle(self, lvl, task_descr, msg, *args, **kwargs):
+    def handle(self, id, descr, lvl, msg, *args, **kwargs):
         if lvl == GenericUI.OUTPUT:
             print(msg.format(*args, **kwargs))
         elif lvl >= self.lvl:
             prefix = self.lvl_to_string[lvl].rjust(8)
             prefix += " "
-            prefix += task_descr.description
+            prefix += descr
             prefix = "[" + prefix + "]"
             if self.use_colors:
                 prefix = self.lvl_to_color[lvl] + prefix + self.end_color

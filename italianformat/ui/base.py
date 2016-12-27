@@ -1,54 +1,57 @@
 import itertools
 import logging
-import os
 import time
 import threading
+import traceback
 
 try:
     import Queue
 except ImportError:
     import queue as Queue
 
-class TaskDescription(object):
-    newid = itertools.count().next
-
-    def __init__(self, description):
-        self.description = description
-        self.id = (os.getpid(), TaskDescription.newid())
-
 
 class UIInterface(object):
-    def __init__(self, queue):
+    newid = itertools.count().next
+
+    def __init__(self, queue, description):
         self.queue = queue
+        self.description = description
+        self.id = UIInterface.newid()
 
-    def start_task(self, description):
-        descr = TaskDescription(description)
-        self.queue.put([None, GenericUI.TASK_STARTING, descr])
-        return descr
+    def __put(self, args):
+        self.queue.put([self.id, self.description] + args)
 
-    def stop_task(self, task_descr):
-        self.queue.put([None, GenericUI.TASK_STOPPING, task_descr])
+    def __enter__(self):
+        self.__put([None, GenericUI.TASK_STARTING])
+        return self
 
-    def log(self, lvl, task_descr, msg, *args, **kwargs):
-        self.queue.put([lvl, task_descr, msg, args, kwargs])
+    def __exit__(self, type, value, tb):
+        if value is not None:
+            self.error(
+                "".join(traceback.format_exception(type, value, tb))
+            )
+        self.__put([None, GenericUI.TASK_STOPPING, value is not None])
 
-    def debug(self, task_descr, msg, *args, **kwargs):
-        self.log(logging.DEBUG, task_descr, msg, *args, **kwargs)
+    def log(self, lvl, msg, *args, **kwargs):
+        self.__put([lvl, msg, args, kwargs])
+
+    def debug(self, msg, *args, **kwargs):
+        self.log(logging.DEBUG, msg, *args, **kwargs)
     
-    def info(self, task_descr, msg, *args, **kwargs):
-        self.log(logging.INFO, task_descr, msg, *args, **kwargs)
+    def info(self, msg, *args, **kwargs):
+        self.log(logging.INFO, msg, *args, **kwargs)
 
-    def warning(self, task_descr, msg, *args, **kwargs):
-        self.log(logging.WARNING, task_descr, msg, *args, **kwargs)
+    def warning(self, msg, *args, **kwargs):
+        self.log(logging.WARNING, msg, *args, **kwargs)
 
-    def error(self, task_descr, msg, *args, **kwargs):
-        self.log(logging.ERROR, task_descr, msg, *args, **kwargs)
+    def error(self, msg, *args, **kwargs):
+        self.log(logging.ERROR, msg, *args, **kwargs)
 
-    def critical(self, task_descr, msg, *args, **kwargs):
-        self.log(logging.CRITICAL, task_descr, msg, *args, **kwargs)
+    def critical(self, msg, *args, **kwargs):
+        self.log(logging.CRITICAL, msg, *args, **kwargs)
 
-    def output(self, task_descr, msg, *args, **kwargs):
-        self.log(GenericUI.OUTPUT, task_descr, msg, *args, **kwargs)
+    def output(self, msg, *args, **kwargs):
+        self.log(GenericUI.OUTPUT, msg, *args, **kwargs)
 
 
 class GenericUI(object):
@@ -61,10 +64,10 @@ class GenericUI(object):
         self.thread = threading.Thread(target=self.run, args=())
         self.stopping = False
 
-    def start_ui(self):
+    def __enter__(self):
         self.thread.start()
 
-    def stop_ui(self):
+    def __exit__(self, type, value, tb):
         self.stopping = True
         self.thread.join()
 
@@ -73,13 +76,16 @@ class GenericUI(object):
         while True:
             try:
                 data = self.queue.get_nowait()
-                if data[0] is None:
-                    if data[1] == GenericUI.TASK_STARTING:
-                        self.register(data[2])
+                if data[2] is None:
+                    if data[3] == GenericUI.TASK_STARTING:
+                        self.register(data[0], data[1])
                     else:
-                        self.unregister(data[2])
+                        self.unregister(data[0], data[1], data[4])
                 else:
-                    self.handle(data[0], data[1], data[2], *data[3], **data[4])
+                    self.handle(
+                        data[0], data[1], data[2],
+                        data[3], *data[4], **data[5]
+                    )
             except Queue.Empty:
                 if self.stopping:
                     stop_attempts += 1
@@ -87,20 +93,26 @@ class GenericUI(object):
                         break
                 time.sleep(0.01)
 
-    def get_logger(self):
-        return UIInterface(self.queue)
+    def get_logger(self, description):
+        return UIInterface(self.queue, description)
 
     # Methods that should be replaced by subclasses
 
-    def register(self, task_descr):
+    def register(self, id, descr):
         """Method that is called when a task is started"""
-        self.handle(logging.INFO, task_descr, "Starting...", [], dict())
+        self.handle(
+            id, descr, logging.INFO,
+            "Starting...", [], dict()
+        )
 
-    def unregister(self, task_descr):
+    def unregister(self, id, descr, exc):
         """Method that is called when a task is stopped"""
-        self.handle(logging.INFO, task_descr, "Stopping...", [], dict())
+        self.handle(
+            id, descr, logging.INFO, "Exiting because of an exception"
+            if exc else "Concluded successfully", [], dict()
+        )
 
-    def handle(self, lvl, task_descr, msg, *args, **kwargs):
+    def handle(self, id, descr, lvl, msg, *args, **kwargs):
         """Method that is called for each message sent"""
         raise NotImplementedError("Please subclass this class")
         
