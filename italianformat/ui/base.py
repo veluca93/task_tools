@@ -16,12 +16,6 @@ class TaskDescription(object):
         self.description = description
         self.id = (os.getpid(), TaskDescription.newid())
 
-    def get_id(self):
-        return self.id
-
-    def get_description(self):
-        return self.description
-
 
 class UIInterface(object):
     def __init__(self, queue):

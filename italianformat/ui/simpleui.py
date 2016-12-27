@@ -33,7 +33,7 @@ class SimpleUI(GenericUI):
         elif lvl >= self.lvl:
             prefix = self.lvl_to_string[lvl].rjust(8)
             prefix += " "
-            prefix += task_descr.get_description()
+            prefix += task_descr.description
             prefix = "[" + prefix + "]"
             if self.use_colors:
                 prefix = self.lvl_to_color[lvl] + prefix + self.end_color
